@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BPulse Check – Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -186,6 +187,24 @@
       line-height: 1.6;
     }
     .normal-note strong { color: var(--normal-color); }
+
+    /* ── Offline bar ── */
+    .offline-bar {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(251,191,36,0.1);
+      border-bottom: 1px solid rgba(251,191,36,0.25);
+      padding: 9px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fbbf24;
+      position: sticky;
+      top: 56px;
+      z-index: 9;
+    }
+    .offline-bar.show { display: flex; }
   </style>
 </head>
 <body>
@@ -204,6 +223,7 @@
     <button class="period-btn" data-period="all" id="btn-all">全期間</button>
   </div>
 </header>
+<div class="offline-bar" id="offline-bar">📡 オフラインモードで動作中 — データはこのデバイスのみに保存されます</div>
 
 <main>
   <!-- Summary cards -->
@@ -308,14 +328,38 @@
   document.title = 'BPulse Check – ' + lang.subtitle;
   document.documentElement.lang = rawLang;
 
+  /* ── Supabase ── */
+  const SUPABASE_URL = 'https://otorkvmcnhwspjwypurb.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_E4ChRzWl9Io2AFOtS2YK2Q_XXineg0S';
+  let db = null;
+
+  function initSupabase() {
+    try { db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch (e) {}
+  }
+
+  async function fetchAllRecords() {
+    if (db) {
+      try {
+        const { data, error } = await db
+          .from('bp_records')
+          .select('id,systolic,diastolic,pulse,location,recorded_at')
+          .order('recorded_at', { ascending: true });
+        if (error) throw error;
+        document.getElementById('offline-bar').classList.remove('show');
+        return data.map(r => ({ ...r, timestamp: r.recorded_at }));
+      } catch (e) {
+        console.warn('Supabase unavailable:', e.message);
+      }
+    }
+    document.getElementById('offline-bar').classList.add('show');
+    try {
+      const local = JSON.parse(localStorage.getItem('bp_records') || '[]');
+      return [...local].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    } catch (e) { return []; }
+  }
+
   /* ── Data ── */
   let allRecords = [];
-  try {
-    allRecords = JSON.parse(localStorage.getItem('bp_records') || '[]');
-  } catch (e) { allRecords = []; }
-
-  /* stored newest-first → sort oldest-first for chart */
-  allRecords.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
   /* ── Period filter ── */
   let activePeriod = '30';
@@ -537,7 +581,19 @@
   });
 
   /* initial render */
-  render(activePeriod);
+  (async () => {
+    initSupabase();
+    allRecords = await fetchAllRecords();
+    render(activePeriod);
+
+    window.addEventListener('online', async () => {
+      allRecords = await fetchAllRecords();
+      render(activePeriod);
+    });
+    window.addEventListener('offline', () => {
+      document.getElementById('offline-bar').classList.add('show');
+    });
+  })();
 })();
 </script>
 </body>
