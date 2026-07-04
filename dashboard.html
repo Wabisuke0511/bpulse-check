@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BPulse Check – Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #222636;
+      --border: #2e3347;
+      --text: #e8eaf0;
+      --text-muted: #7b8099;
+      --accent: #5b7fff;
+      --sys-color: #f87171;
+      --dia-color: #38bdf8;
+      --normal-color: #34d399;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-back {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 14px;
+      white-space: nowrap;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .header-back:hover { background: rgba(91,127,255,0.12); }
+
+    .header-title {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header-title .app-name {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .header-title .page-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .period-btns {
+      display: flex;
+      gap: 6px;
+    }
+    .period-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .period-btn:hover {
+      background: rgba(91,127,255,0.1);
+      color: var(--text);
+    }
+    .period-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Summary cards ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 700px) {
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .summary-grid .card:last-child { grid-column: 1 / -1; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .card-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+    .card-value.sys  { color: var(--sys-color); }
+    .card-value.dia  { color: var(--dia-color); }
+    .card-value.pulse { color: var(--normal-color); }
+    .card-unit {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ── Chart card ── */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 300px;
+    }
+
+    #bp-chart { display: block; }
+
+    .no-data-msg {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    /* ── Normal note ── */
+    .normal-note {
+      background: rgba(52,211,153,0.07);
+      border: 1px solid rgba(52,211,153,0.25);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .normal-note strong { color: var(--normal-color); }
+  </style>
+</head>
+<body>
+
+<header>
+  <a id="back-link" href="index.html" class="header-back">← 戻る</a>
+
+  <div class="header-title">
+    <span class="app-name">BPulse Check</span>
+    <span class="page-name" id="lbl-subtitle">血圧グラフ</span>
+  </div>
+
+  <div class="period-btns">
+    <button class="period-btn" data-period="7"   id="btn-7">7日</button>
+    <button class="period-btn active" data-period="30"  id="btn-30">30日</button>
+    <button class="period-btn" data-period="all" id="btn-all">全期間</button>
+  </div>
+</header>
+
+<main>
+  <!-- Summary cards -->
+  <div class="summary-grid">
+    <div class="card">
+      <span class="card-label" id="lbl-avg-sys">収縮期 平均</span>
+      <span class="card-value sys" id="val-avg-sys">--</span>
+      <span class="card-unit">mmHg</span>
+    </div>
+    <div class="card">
+      <span class="card-label" id="lbl-avg-dia">拡張期 平均</span>
+      <span class="card-value dia" id="val-avg-dia">--</span>
+      <span class="card-unit">mmHg</span>
+    </div>
+    <div class="card">
+      <span class="card-label" id="lbl-max-sys">収縮期 最高</span>
+      <span class="card-value sys" id="val-max-sys">--</span>
+      <span class="card-unit">mmHg</span>
+    </div>
+    <div class="card">
+      <span class="card-label" id="lbl-min-sys">収縮期 最低</span>
+      <span class="card-value sys" id="val-min-sys">--</span>
+      <span class="card-unit">mmHg</span>
+    </div>
+    <div class="card">
+      <span class="card-label" id="lbl-avg-pulse">脈拍 平均</span>
+      <span class="card-value pulse" id="val-avg-pulse">--</span>
+      <span class="card-unit" id="lbl-records">件</span>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-card">
+    <div class="chart-wrapper" id="chart-wrapper">
+      <canvas id="bp-chart"></canvas>
+      <div class="no-data-msg" id="no-data-msg">この期間の記録がありません</div>
+    </div>
+  </div>
+
+  <!-- Normal zone note -->
+  <div class="normal-note" id="normal-note">
+    <strong id="lbl-normal-zone">正常域</strong>:
+    収縮期 &lt;120 mmHg かつ 拡張期 &lt;80 mmHg（日本高血圧学会 2019 基準）
+  </div>
+</main>
+
+<script>
+(function () {
+  /* ── i18n ── */
+  const LANGS = {
+    ja: {
+      back: '← 戻る', dashboard: 'ダッシュボード', subtitle: '血圧グラフ',
+      period_7: '7日', period_30: '30日', period_all: '全期間',
+      avg_sys: '収縮期 平均', avg_dia: '拡張期 平均',
+      max_sys: '収縮期 最高', min_sys: '収縮期 最低', avg_pulse: '脈拍 平均',
+      records: '件', no_data: 'この期間の記録がありません',
+      systolic_label: '収縮期', diastolic_label: '拡張期', normal_zone: '正常域',
+    },
+    en: {
+      back: '← Back', dashboard: 'Dashboard', subtitle: 'Blood Pressure Chart',
+      period_7: '7 days', period_30: '30 days', period_all: 'All',
+      avg_sys: 'Avg Systolic', avg_dia: 'Avg Diastolic',
+      max_sys: 'Max Systolic', min_sys: 'Min Systolic', avg_pulse: 'Avg Pulse',
+      records: 'records', no_data: 'No records in this period',
+      systolic_label: 'Systolic', diastolic_label: 'Diastolic', normal_zone: 'Normal zone',
+    },
+    de: {
+      back: '← Zurück', dashboard: 'Dashboard', subtitle: 'Blutdruck-Diagramm',
+      period_7: '7 Tage', period_30: '30 Tage', period_all: 'Alle',
+      avg_sys: 'Ø Systolisch', avg_dia: 'Ø Diastolisch',
+      max_sys: 'Max Syst.', min_sys: 'Min Syst.', avg_pulse: 'Ø Puls',
+      records: 'Messungen', no_data: 'Keine Daten in diesem Zeitraum',
+      systolic_label: 'Systolisch', diastolic_label: 'Diastolisch', normal_zone: 'Normalbereich',
+    },
+    zh: {
+      back: '← 返回', dashboard: '数据图表', subtitle: '血压图表',
+      period_7: '7天', period_30: '30天', period_all: '全部',
+      avg_sys: '收缩压均值', avg_dia: '舒张压均值',
+      max_sys: '收缩压最高', min_sys: '收缩压最低', avg_pulse: '脉搏均值',
+      records: '条', no_data: '此期间暂无记录',
+      systolic_label: '收缩压', diastolic_label: '舒张压', normal_zone: '正常范围',
+    },
+  };
+
+  const rawLang = localStorage.getItem('bp_lang') || 'ja';
+  const lang = LANGS[rawLang] || LANGS['ja'];
+
+  /* apply labels */
+  document.getElementById('back-link').textContent   = lang.back;
+  document.getElementById('lbl-subtitle').textContent = lang.subtitle;
+  document.getElementById('btn-7').textContent        = lang.period_7;
+  document.getElementById('btn-30').textContent       = lang.period_30;
+  document.getElementById('btn-all').textContent      = lang.period_all;
+  document.getElementById('lbl-avg-sys').textContent  = lang.avg_sys;
+  document.getElementById('lbl-avg-dia').textContent  = lang.avg_dia;
+  document.getElementById('lbl-max-sys').textContent  = lang.max_sys;
+  document.getElementById('lbl-min-sys').textContent  = lang.min_sys;
+  document.getElementById('lbl-avg-pulse').textContent = lang.avg_pulse;
+  document.getElementById('lbl-records').textContent  = lang.records;
+  document.getElementById('no-data-msg').textContent  = lang.no_data;
+  document.getElementById('lbl-normal-zone').textContent = lang.normal_zone;
+  document.title = 'BPulse Check – ' + lang.subtitle;
+  document.documentElement.lang = rawLang;
+
+  /* ── Data ── */
+  let allRecords = [];
+  try {
+    allRecords = JSON.parse(localStorage.getItem('bp_records') || '[]');
+  } catch (e) { allRecords = []; }
+
+  /* stored newest-first → sort oldest-first for chart */
+  allRecords.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  /* ── Period filter ── */
+  let activePeriod = '30';
+
+  function filterRecords(period) {
+    const now = new Date();
+    if (period === '7') {
+      const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 7);
+      return allRecords.filter(r => new Date(r.timestamp) >= cutoff);
+    }
+    if (period === '30') {
+      const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 30);
+      return allRecords.filter(r => new Date(r.timestamp) >= cutoff);
+    }
+    /* all – cap at 90 newest */
+    return allRecords.slice(-90);
+  }
+
+  /* ── Helpers ── */
+  function avg(arr) {
+    if (!arr.length) return null;
+    return Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
+  }
+  function max(arr) { return arr.length ? Math.max(...arr) : null; }
+  function min(arr) { return arr.length ? Math.min(...arr) : null; }
+
+  function fmtVal(v) { return v !== null ? String(v) : '--'; }
+
+  function fmtDate(ts) {
+    const d = new Date(ts);
+    const M = d.getMonth() + 1;
+    const D = d.getDate();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${M}/${D} ${hh}:${mm}`;
+  }
+
+  /* ── Normal zone plugin ── */
+  const normalZonePlugin = {
+    id: 'normalZone',
+    beforeDraw(chart) {
+      const { ctx, chartArea: ca, scales } = chart;
+      if (!ca) return;
+      const y120 = scales.y.getPixelForValue(120);
+      const y80  = scales.y.getPixelForValue(80);
+      const bottom = ca.bottom;
+
+      ctx.save();
+
+      /* shaded area: bottom → y=120 */
+      const topY   = Math.min(y120, y80);
+      const fillH  = bottom - topY;
+      if (fillH > 0) {
+        ctx.fillStyle = 'rgba(52,211,153,0.07)';
+        ctx.fillRect(ca.left, topY, ca.right - ca.left, fillH);
+      }
+
+      /* dashed lines at y=120 and y=80 */
+      [120, 80].forEach(val => {
+        const py = scales.y.getPixelForValue(val);
+        ctx.beginPath();
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = 'rgba(52,211,153,0.4)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(ca.left, py);
+        ctx.lineTo(ca.right, py);
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    },
+  };
+
+  /* ── Chart instance ── */
+  let chartInstance = null;
+
+  function buildChart(records) {
+    const canvas = document.getElementById('bp-chart');
+    const noData = document.getElementById('no-data-msg');
+
+    if (!records.length) {
+      canvas.style.display = 'none';
+      noData.style.display = 'flex';
+      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+      return;
+    }
+
+    canvas.style.display = 'block';
+    noData.style.display = 'none';
+
+    const labels = records.map(r => fmtDate(r.timestamp));
+    const sysData = records.map(r => r.systolic);
+    const diaData = records.map(r => r.diastolic);
+
+    const maxSys = Math.max(...sysData);
+    const yMax   = Math.max(180, maxSys + 20);
+
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+    chartInstance = new Chart(canvas, {
+      type: 'line',
+      plugins: [normalZonePlugin],
+      data: {
+        labels,
+        datasets: [
+          {
+            label: lang.systolic_label,
+            data: sysData,
+            borderColor: '#f87171',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#f87171',
+            borderWidth: 2,
+            fill: false,
+          },
+          {
+            label: lang.diastolic_label,
+            data: diaData,
+            borderColor: '#38bdf8',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#38bdf8',
+            borderWidth: 2,
+            fill: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 300 },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: {
+              color: '#e8eaf0',
+              boxWidth: 12,
+              boxHeight: 2,
+              padding: 16,
+              font: { size: 12 },
+            },
+          },
+          tooltip: {
+            backgroundColor: '#1a1d27',
+            borderColor: '#2e3347',
+            borderWidth: 1,
+            titleColor: '#e8eaf0',
+            bodyColor: '#7b8099',
+            padding: 12,
+            callbacks: {
+              label(ctx) {
+                return ` ${ctx.dataset.label}: ${ctx.parsed.y} mmHg`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#7b8099',
+              maxRotation: 45,
+              font: { size: 11 },
+              maxTicksLimit: 10,
+            },
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            border: { color: '#2e3347' },
+          },
+          y: {
+            min: 50,
+            max: yMax,
+            ticks: {
+              color: '#7b8099',
+              font: { size: 11 },
+              stepSize: 20,
+            },
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            border: { color: '#2e3347' },
+          },
+        },
+      },
+    });
+  }
+
+  /* ── Update summary cards ── */
+  function updateSummary(records) {
+    const sysArr   = records.map(r => r.systolic);
+    const diaArr   = records.map(r => r.diastolic);
+    const pulseArr = records.filter(r => r.pulse != null).map(r => r.pulse);
+
+    document.getElementById('val-avg-sys').textContent   = fmtVal(avg(sysArr));
+    document.getElementById('val-avg-dia').textContent   = fmtVal(avg(diaArr));
+    document.getElementById('val-max-sys').textContent   = fmtVal(max(sysArr));
+    document.getElementById('val-min-sys').textContent   = fmtVal(min(sysArr));
+    document.getElementById('val-avg-pulse').textContent = fmtVal(avg(pulseArr));
+  }
+
+  /* ── Render ── */
+  function render(period) {
+    const records = filterRecords(period);
+    updateSummary(records);
+    buildChart(records);
+  }
+
+  /* ── Period buttons ── */
+  document.querySelectorAll('.period-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activePeriod = btn.dataset.period;
+      render(activePeriod);
+    });
+  });
+
+  /* initial render */
+  render(activePeriod);
+})();
+</script>
+</body>
+</html>

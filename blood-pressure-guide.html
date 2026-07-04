@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>血圧分類基準 — BPulse Check</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #222636;
+      --border: #2e3347;
+      --text: #e8eaf0;
+      --text-muted: #7b8099;
+      --accent: #5b7fff;
+
+      --c-normal:    #34d399;
+      --c-elevated:  #38bdf8;
+      --c-high:      #fbbf24;
+      --c-ht1:       #fb923c;
+      --c-ht2:       #f87171;
+      --c-ht3:       #dc2626;
+      --c-ish:       #c084fc;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 80px;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .btn-back {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 7px 12px;
+      text-decoration: none;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-back:hover { color: var(--accent); border-color: var(--accent); }
+
+    .header-title h1 { font-size: 1.1rem; font-weight: 700; }
+    .header-title p  { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 28px 16px;
+    }
+
+    /* ── Section ── */
+    .section {
+      margin-bottom: 36px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .section-header h2 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .section-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── Table ── */
+    .bp-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      font-size: 0.85rem;
+    }
+
+    .bp-table thead th {
+      background: var(--surface2);
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bp-table thead th:nth-child(2),
+    .bp-table thead th:nth-child(3) { text-align: center; }
+
+    .bp-table tbody tr { border-bottom: 1px solid var(--border); }
+    .bp-table tbody tr:last-child { border-bottom: none; }
+
+    .bp-table tbody td {
+      padding: 12px 14px;
+      vertical-align: middle;
+    }
+
+    .bp-table tbody td:nth-child(2),
+    .bp-table tbody td:nth-child(3) { text-align: center; font-weight: 600; font-size: 0.9rem; }
+
+    .cls-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+
+    .cls-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* 行カラー（左ボーダーのみ） */
+    .row-normal   td:first-child { border-left: 3px solid var(--c-normal); }
+    .row-elevated td:first-child { border-left: 3px solid var(--c-elevated); }
+    .row-high     td:first-child { border-left: 3px solid var(--c-high); }
+    .row-ht1      td:first-child { border-left: 3px solid var(--c-ht1); }
+    .row-ht2      td:first-child { border-left: 3px solid var(--c-ht2); }
+    .row-ht3      td:first-child { border-left: 3px solid var(--c-ht3); }
+    .row-ish      td:first-child { border-left: 3px solid var(--c-ish); }
+
+    /* ── Note ── */
+    .note-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 28px;
+    }
+
+    .note-box h3 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .note-box ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .note-box li {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      padding-left: 14px;
+      position: relative;
+      line-height: 1.55;
+    }
+
+    .note-box li::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* ── Diff highlight ── */
+    .diff-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(91,127,255,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(91,127,255,0.3);
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+
+    /* ── Source ── */
+    .source {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-align: right;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 480px) {
+      .bp-table { font-size: 0.78rem; }
+      .bp-table thead th, .bp-table tbody td { padding: 9px 10px; }
+      .cls-label { font-size: 0.78rem; gap: 5px; }
+      .bp-table tbody td:nth-child(2),
+      .bp-table tbody td:nth-child(3) { font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="btn-back">← 戻る</a>
+  <div class="header-title">
+    <h1>血圧分類基準</h1>
+    <p>日本高血圧学会（JSH 2019）</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- 注意事項 -->
+  <div class="note-box">
+    <h3>ポイント</h3>
+    <ul>
+      <li>収縮期（上）と拡張期（下）のどちらか高い方の基準で分類されます。</li>
+      <li>孤立性収縮期高血圧は「収縮期が基準以上 かつ 拡張期が基準未満」の場合です。</li>
+      <li>診察室血圧と家庭血圧では基準値が異なります（家庭血圧の方が低め）。</li>
+      <li>この表はあくまで参考です。医療上の判断は医師に相談してください。</li>
+    </ul>
+  </div>
+
+  <!-- 診察室血圧 -->
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <h2>🏥 診察室血圧</h2>
+        <div class="section-subtitle">医療機関で測定した場合の基準値</div>
+      </div>
+    </div>
+    <table class="bp-table">
+      <thead>
+        <tr>
+          <th>分類</th>
+          <th>収縮期（上）</th>
+          <th>拡張期（下）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="row-normal">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-normal)"></span>正常血圧</span></td>
+          <td>&lt; 120</td>
+          <td>かつ &lt; 80</td>
+        </tr>
+        <tr class="row-elevated">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-elevated)"></span>正常高値血圧</span></td>
+          <td>120 〜 129</td>
+          <td>かつ &lt; 80</td>
+        </tr>
+        <tr class="row-high">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-high)"></span>高値血圧</span></td>
+          <td>130 〜 139</td>
+          <td>かつ/または 80 〜 89</td>
+        </tr>
+        <tr class="row-ht1">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-ht1)"></span>I度高血圧</span></td>
+          <td>140 〜 159</td>
+          <td>かつ/または 90 〜 99</td>
+        </tr>
+        <tr class="row-ht2">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-ht2)"></span>II度高血圧</span></td>
+          <td>160 〜 179</td>
+          <td>かつ/または 100 〜 109</td>
+        </tr>
+        <tr class="row-ht3">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-ht3)"></span>III度高血圧</span></td>
+          <td>≥ 180</td>
+          <td>かつ/または ≥ 110</td>
+        </tr>
+        <tr class="row-ish">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-ish)"></span>孤立性収縮期高血圧</span></td>
+          <td>≥ 140</td>
+          <td>かつ &lt; 90</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="source">単位：mmHg</div>
+  </div>
+
+  <!-- 家庭血圧 -->
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <h2>🏠 家庭血圧</h2>
+        <div class="section-subtitle">自宅で測定した場合の基準値（診察室より低め）</div>
+      </div>
+    </div>
+    <table class="bp-table">
+      <thead>
+        <tr>
+          <th>分類</th>
+          <th>収縮期（上）</th>
+          <th>拡張期（下）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="row-normal">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-normal)"></span>正常血圧</span></td>
+          <td>&lt; 115 <span class="diff-badge">-5</span></td>
+          <td>かつ &lt; 75 <span class="diff-badge">-5</span></td>
+        </tr>
+        <tr class="row-elevated">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-elevated)"></span>正常高値血圧</span></td>
+          <td>115 〜 124 <span class="diff-badge">-5</span></td>
+          <td>かつ &lt; 75 <span class="diff-badge">-5</span></td>
+        </tr>
+        <tr class="row-high">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-high)"></span>高値血圧</span></td>
+          <td>125 〜 134 <span class="diff-badge">-5</span></td>
+          <td>かつ/または 75 〜 84 <span class="diff-badge">-5</span></td>
+        </tr>
+        <tr class="row-ht1">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-ht1)"></span>I度高血圧</span></td>
+          <td>135 〜 144 <span class="diff-badge">-5</span></td>
+          <td>かつ/または 85 〜 89 <span class="diff-badge">-5</span></td>
+        </tr>
+        <tr class="row-ht2">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-ht2)"></span>II度高血圧</span></td>
+          <td>145 〜 159 <span class="diff-badge">-15</span></td>
+          <td>かつ/または 90 〜 99 <span class="diff-badge">-10</span></td>
+        </tr>
+        <tr class="row-ht3">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-ht3)"></span>III度高血圧</span></td>
+          <td>≥ 160 <span class="diff-badge">-20</span></td>
+          <td>かつ/または ≥ 100 <span class="diff-badge">-10</span></td>
+        </tr>
+        <tr class="row-ish">
+          <td><span class="cls-label"><span class="cls-dot" style="background:var(--c-ish)"></span>孤立性収縮期高血圧</span></td>
+          <td>≥ 135 <span class="diff-badge">-5</span></td>
+          <td>かつ &lt; 85 <span class="diff-badge">-5</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="source">単位：mmHg ／ <span class="diff-badge" style="margin-left:0">-n</span> は診察室基準との差</div>
+  </div>
+
+  <!-- 診察室 vs 家庭 比較 -->
+  <div class="note-box">
+    <h3>診察室血圧 vs 家庭血圧</h3>
+    <ul>
+      <li><strong style="color:var(--text)">白衣高血圧</strong>：診察室では高いが家庭では正常。実際のリスクは低い傾向。</li>
+      <li><strong style="color:var(--text)">仮面高血圧</strong>：診察室では正常だが家庭では高い。見逃されやすく注意が必要。</li>
+      <li>家庭血圧の方が日常の血圧を正確に反映するため、治療管理の指標として重要視されています。</li>
+      <li>朝（起床後1時間以内、排尿後、朝食前、服薬前）と夜（就寝前）の測定が推奨されています。</li>
+    </ul>
+  </div>
+
+</main>
+</body>
+</html>

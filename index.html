@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BPulse Check</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #222636;
+      --border: #2e3347;
+      --text: #e8eaf0;
+      --text-muted: #7b8099;
+      --accent: #5b7fff;
+      --accent-dim: #3d55cc;
+      --c-normal:   #34d399;
+      --c-elevated: #38bdf8;
+      --c-high:     #fbbf24;
+      --c-ht1:      #fb923c;
+      --c-ht2:      #f87171;
+      --c-ht3:      #dc2626;
+      --c-ish:      #c084fc;
+      --c-good: #34d399;
+      --c-same: #94a3b8;
+      --c-warn: #fbbf24;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .header-title h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.02em; }
+    .header-title p  { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+    .header-actions  { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+    .btn-header {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 7px 11px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-header:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(91,127,255,0.08);
+    }
+
+    /* ── Language Selector ── */
+    .lang-selector { position: relative; }
+
+    .lang-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px;
+      z-index: 50;
+      min-width: 120px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .lang-menu.open { display: flex; }
+
+    .lang-menu-item {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .lang-menu-item:hover { background: var(--surface2); color: var(--text); }
+    .lang-menu-item.active { color: var(--accent); background: rgba(91,127,255,0.1); }
+
+    /* ── Main ── */
+    main { max-width: 600px; margin: 0 auto; padding: 24px 16px; }
+
+    /* ── Profile Card ── */
+    .profile-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+    }
+
+    .profile-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .card-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .profile-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .profile-field { display: flex; flex-direction: column; gap: 5px; }
+
+    .profile-field label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    .profile-field input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 11px 8px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -moz-appearance: textfield;
+    }
+
+    .profile-field input::-webkit-inner-spin-button,
+    .profile-field input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .profile-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(91,127,255,0.2);
+    }
+
+    .profile-field input::placeholder { color: var(--border); font-size: 1rem; }
+
+    .gender-toggle { display: flex; gap: 8px; }
+
+    .gender-btn {
+      flex: 1;
+      padding: 11px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .gender-btn.active {
+      background: rgba(91,127,255,0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-save-profile {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 700;
+      padding: 11px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .btn-save-profile:hover {
+      background: rgba(91,127,255,0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .profile-compact { display: none; align-items: center; gap: 10px; }
+    .profile-compact.visible { display: flex; }
+
+    .profile-chip {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .btn-edit-profile {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.15s;
+    }
+
+    .btn-edit-profile:hover { color: var(--accent); }
+
+    /* ── Input Card ── */
+    .input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .input-card-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .location-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+
+    .loc-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .loc-btn.active {
+      background: rgba(91,127,255,0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── AI Section ── */
+    .ai-section {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .ai-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .ai-section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+    }
+
+    .ai-status {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      transition: all 0.2s;
+    }
+
+    .ai-status.recording {
+      color: var(--c-ht2);
+      background: rgba(248,113,113,0.12);
+      border: 1px solid rgba(248,113,113,0.3);
+      animation: pulse-fade 1s ease-in-out infinite;
+    }
+
+    .ai-status.analyzing {
+      color: var(--accent);
+      background: rgba(91,127,255,0.12);
+      border: 1px solid rgba(91,127,255,0.3);
+    }
+
+    .ai-status.done {
+      color: var(--c-good);
+      background: rgba(52,211,153,0.12);
+      border: 1px solid rgba(52,211,153,0.3);
+    }
+
+    .ai-status.error {
+      color: var(--c-ht1);
+      background: rgba(251,146,60,0.12);
+      border: 1px solid rgba(251,146,60,0.3);
+    }
+
+    @keyframes pulse-fade {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .ai-textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      padding: 10px 12px;
+      resize: none;
+      outline: none;
+      transition: border-color 0.15s;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .ai-textarea:focus { border-color: var(--accent); }
+    .ai-textarea::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+    .ai-btn-row { display: flex; gap: 8px; }
+
+    .btn-mic {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 9px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-mic:hover { border-color: var(--c-ht2); color: var(--c-ht2); }
+
+    .btn-mic.recording {
+      background: rgba(248,113,113,0.15);
+      border-color: var(--c-ht2);
+      color: var(--c-ht2);
+      animation: recording-pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes recording-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
+      50% { box-shadow: 0 0 0 4px rgba(248,113,113,0.25); }
+    }
+
+    .btn-ai-parse {
+      flex: 1;
+      background: rgba(91,127,255,0.12);
+      border: 1px solid rgba(91,127,255,0.35);
+      border-radius: 10px;
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 9px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-ai-parse:hover { background: rgba(91,127,255,0.22); }
+    .btn-ai-parse:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .ai-hint {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      opacity: 0.7;
+      line-height: 1.5;
+    }
+
+    .input-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .input-divider::before,
+    .input-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .input-divider span {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .inputs-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+
+    .field label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    .field input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 1.45rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 13px 6px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -moz-appearance: textfield;
+    }
+
+    .field input::-webkit-inner-spin-button,
+    .field input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(91,127,255,0.2);
+    }
+
+    .field input::placeholder { color: var(--border); font-size: 1rem; }
+    .field .unit { font-size: 0.66rem; color: var(--text-muted); text-align: center; }
+
+    .btn-record {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 14px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+
+    .btn-record:hover { background: var(--accent-dim); }
+    .btn-record:active { transform: scale(0.98); }
+
+    /* ── Legend ── */
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 20px; }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-normal   { background: var(--c-normal); }
+    .dot-elevated { background: var(--c-elevated); }
+    .dot-high     { background: var(--c-high); }
+    .dot-ht1      { background: var(--c-ht1); }
+    .dot-ht2      { background: var(--c-ht2); }
+    .dot-ht3      { background: var(--c-ht3); }
+    .dot-ish      { background: var(--c-ish); }
+
+    /* ── Records ── */
+    .records-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .records-header h2 {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .count-badge {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 2px 10px;
+    }
+
+    .records-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .empty-state { text-align: center; padding: 48px 0; color: var(--text-muted); }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+    .empty-state p { font-size: 0.88rem; }
+
+    /* ── Record Card ── */
+    .record-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      animation: fadeIn 0.2s ease;
+      position: relative;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-top { display: flex; align-items: center; gap: 12px; padding-right: 32px; }
+
+    .bp-display { display: flex; align-items: baseline; gap: 3px; flex: 1; }
+
+    .systolic-val { font-size: 2.1rem; font-weight: 800; line-height: 1; }
+    .sep { font-size: 1.5rem; font-weight: 300; color: var(--text-muted); line-height: 1; margin: 0 2px; }
+    .diastolic-val { font-size: 1.45rem; font-weight: 700; color: var(--text); line-height: 1; }
+    .bp-unit { font-size: 0.68rem; color: var(--text-muted); align-self: flex-end; padding-bottom: 3px; }
+
+    .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+
+    .pulse-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 9px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .card-bottom {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-bottom-row1 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .card-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    .classification-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid;
+    }
+
+    .location-badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 8px;
+    }
+
+    .timestamp { font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; }
+
+    .peer-comparison {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 7px 10px;
+    }
+
+    .peer-result { font-size: 0.78rem; font-weight: 700; }
+    .peer-result.good { color: var(--c-good); }
+    .peer-result.same { color: var(--c-same); }
+    .peer-result.warn { color: var(--c-warn); }
+    .peer-avg { font-size: 0.68rem; color: var(--text-muted); }
+
+    .peer-disclaimer {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      opacity: 0.7;
+      text-align: right;
+    }
+
+    .btn-delete {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      padding: 0;
+    }
+
+    .btn-delete:hover {
+      background: rgba(248,113,113,0.18);
+      border-color: var(--c-ht2);
+      color: var(--c-ht2);
+    }
+
+    /* 分類カラー */
+    .cls-normal   { color: var(--c-normal);   border-color: var(--c-normal);   background: rgba(52,211,153,0.1); }
+    .cls-elevated { color: var(--c-elevated); border-color: var(--c-elevated); background: rgba(56,189,248,0.1); }
+    .cls-high     { color: var(--c-high);     border-color: var(--c-high);     background: rgba(251,191,36,0.1); }
+    .cls-ht1      { color: var(--c-ht1);      border-color: var(--c-ht1);      background: rgba(251,146,60,0.1); }
+    .cls-ht2      { color: var(--c-ht2);      border-color: var(--c-ht2);      background: rgba(248,113,113,0.1); }
+    .cls-ht3      { color: var(--c-ht3);      border-color: var(--c-ht3);      background: rgba(220,38,38,0.1); }
+    .cls-ish      { color: var(--c-ish);      border-color: var(--c-ish);      background: rgba(192,132,252,0.1); }
+
+    /* ── API Key Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .modal-header h3 { font-size: 1rem; font-weight: 700; }
+
+    .modal-close {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      transition: color 0.15s;
+    }
+
+    .modal-close:hover { color: var(--text); }
+
+    .modal-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 16px;
+      white-space: pre-line;
+    }
+
+    .modal-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.88rem;
+      font-family: 'SF Mono', 'Consolas', monospace;
+      padding: 12px 14px;
+      outline: none;
+      margin-bottom: 14px;
+      transition: border-color 0.15s;
+    }
+
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+    .modal-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+
+    .btn-modal-save {
+      flex: 1;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      padding: 11px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-modal-save:hover { background: var(--accent-dim); }
+
+    .btn-modal-cancel {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 11px 16px;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .btn-modal-cancel:hover { color: var(--text); }
+
+    .btn-modal-delete {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      cursor: pointer;
+      padding: 4px;
+      transition: color 0.15s;
+      text-decoration: underline;
+    }
+
+    .btn-modal-delete:hover { color: var(--c-ht2); }
+    .modal-note { font-size: 0.7rem; color: var(--text-muted); opacity: 0.7; line-height: 1.5; }
+    .modal-note a { color: var(--accent); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), opacity 0.25s;
+      opacity: 0;
+      z-index: 300;
+      white-space: nowrap;
+      max-width: calc(100vw - 40px);
+      text-align: center;
+    }
+
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    @media (max-width: 420px) {
+      .inputs-row { gap: 7px; }
+      .field input { font-size: 1.2rem; padding: 11px 5px; }
+      .systolic-val { font-size: 1.8rem; }
+      .legend { gap: 6px 12px; }
+      .profile-row { grid-template-columns: 1fr; }
+      .ai-btn-row { flex-direction: column; }
+      .header-actions { gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <h1 id="app-title">BPulse Check</h1>
+    <p id="app-subtitle">毎日の血圧・脈拍を記録</p>
+  </div>
+  <div class="header-actions">
+    <!-- 言語セレクター -->
+    <div class="lang-selector" id="lang-selector">
+      <button class="btn-header" id="btn-lang" onclick="toggleLangMenu()">🌐</button>
+      <div class="lang-menu" id="lang-menu">
+        <button class="lang-menu-item" onclick="setLang('ja')">🇯🇵 日本語</button>
+        <button class="lang-menu-item" onclick="setLang('en')">🇺🇸 English</button>
+        <button class="lang-menu-item" onclick="setLang('de')">🇩🇪 Deutsch</button>
+        <button class="lang-menu-item" onclick="setLang('zh')">🇨🇳 中文</button>
+      </div>
+    </div>
+    <button class="btn-header" onclick="openApiKeyModal()" id="btn-apikey">⚙️ APIキー</button>
+    <a href="dashboard.html" class="btn-header" id="btn-dashboard">📊 グラフ</a>
+    <a href="blood-pressure-guide.html" class="btn-header" id="btn-guide">📋 基準を確認</a>
+  </div>
+</header>
+
+<main>
+  <!-- プロフィールカード -->
+  <div class="profile-card">
+    <div class="profile-card-header">
+      <span class="card-label" id="lbl-profile">プロフィール設定</span>
+    </div>
+    <div class="profile-compact" id="profile-compact">
+      <div class="profile-chip" id="profile-chip-text"></div>
+      <button class="btn-edit-profile" id="btn-edit-profile" onclick="editProfile()">変更</button>
+    </div>
+    <div id="profile-form">
+      <div class="profile-row">
+        <div class="profile-field">
+          <label id="lbl-age" for="profile-age">年齢</label>
+          <input type="number" id="profile-age" placeholder="60" min="1" max="120">
+        </div>
+        <div class="profile-field">
+          <label id="lbl-gender">性別</label>
+          <div class="gender-toggle">
+            <button class="gender-btn active" id="btn-male" onclick="setGender('male')">男性</button>
+            <button class="gender-btn" id="btn-female" onclick="setGender('female')">女性</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn-save-profile" id="btn-save-profile" onclick="saveProfile()">プロフィールを保存して同年代比較を有効にする</button>
+    </div>
+  </div>
+
+  <!-- 入力カード -->
+  <div class="input-card">
+    <div class="input-card-title" id="lbl-new-record">新しい記録</div>
+
+    <div class="location-toggle">
+      <button class="loc-btn active" id="btn-clinic" onclick="setLocation('clinic')">🏥 診察室血圧</button>
+      <button class="loc-btn" id="btn-home" onclick="setLocation('home')">🏠 家庭血圧</button>
+    </div>
+
+    <div class="ai-section">
+      <div class="ai-section-header">
+        <span class="ai-section-label" id="lbl-ai">🤖 AI音声・テキスト入力</span>
+        <span class="ai-status" id="ai-status"></span>
+      </div>
+      <textarea class="ai-textarea" id="ai-text-input" rows="2"
+        placeholder="「上が130、下が85、脈拍72」と話しかけるか入力 → AI解析"></textarea>
+      <div class="ai-btn-row">
+        <button class="btn-mic" id="btn-mic" onclick="toggleMic()">🎤 録音開始</button>
+        <button class="btn-ai-parse" id="btn-ai-parse" onclick="aiParse(false)">🤖 AI解析</button>
+      </div>
+      <div class="ai-hint" id="ai-hint">数字3つ：「130 85 72」→ 即時入力（API不要） ／ 自然言語：「上が130下が85脈拍72」→ AI解析</div>
+    </div>
+
+    <div class="input-divider"><span id="lbl-manual-input">または数値を直接入力</span></div>
+
+    <div class="inputs-row">
+      <div class="field">
+        <label id="lbl-systolic">収縮期（上）</label>
+        <input type="number" id="systolic" placeholder="120" min="60" max="260">
+        <span class="unit">mmHg</span>
+      </div>
+      <div class="field">
+        <label id="lbl-diastolic">拡張期（下）</label>
+        <input type="number" id="diastolic" placeholder="80" min="40" max="160">
+        <span class="unit">mmHg</span>
+      </div>
+      <div class="field">
+        <label id="lbl-pulse">脈拍</label>
+        <input type="number" id="pulse" placeholder="70" min="30" max="200">
+        <span class="unit">bpm</span>
+      </div>
+    </div>
+    <button class="btn-record" id="btn-record" onclick="addRecord()">記録する</button>
+  </div>
+
+  <!-- 凡例 -->
+  <div class="legend">
+    <div class="legend-item"><span class="status-dot dot-normal"></span><span id="leg-normal">正常血圧</span></div>
+    <div class="legend-item"><span class="status-dot dot-elevated"></span><span id="leg-elevated">正常高値</span></div>
+    <div class="legend-item"><span class="status-dot dot-high"></span><span id="leg-high">高値血圧</span></div>
+    <div class="legend-item"><span class="status-dot dot-ht1"></span><span id="leg-ht1">I度高血圧</span></div>
+    <div class="legend-item"><span class="status-dot dot-ht2"></span><span id="leg-ht2">II度高血圧</span></div>
+    <div class="legend-item"><span class="status-dot dot-ht3"></span><span id="leg-ht3">III度高血圧</span></div>
+    <div class="legend-item"><span class="status-dot dot-ish"></span><span id="leg-ish">孤立性収縮期</span></div>
+  </div>
+
+  <!-- 記録一覧 -->
+  <div class="records-header">
+    <h2 id="lbl-records">記録一覧</h2>
+    <span class="count-badge" id="count-badge">0件</span>
+  </div>
+  <div class="records-list" id="records-list">
+    <div class="empty-state">
+      <div class="icon">🩺</div>
+      <p id="lbl-empty">まだ記録がありません</p>
+    </div>
+  </div>
+</main>
+
+<!-- APIキーモーダル -->
+<div id="modal-apikey" class="modal-overlay" style="display:none" onclick="modalOverlayClick(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">⚙️ Claude APIキー設定</h3>
+      <button class="modal-close" onclick="closeApiKeyModal()">✕</button>
+    </div>
+    <p class="modal-desc" id="modal-desc">AI解析機能を使用するにはAnthropicのAPIキーが必要です。
+キーはこのデバイスのlocalStorageのみに保存され、外部に送信されません。
+APIキー未設定でも、ローカルの正規表現でテキスト解析が使えます。</p>
+    <input type="password" id="apikey-input" class="modal-input" placeholder="sk-ant-api03-...">
+    <div class="modal-actions">
+      <button class="btn-modal-save" id="modal-save" onclick="saveApiKey()">保存して有効にする</button>
+      <button class="btn-modal-cancel" id="modal-cancel" onclick="closeApiKeyModal()">キャンセル</button>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center">
+      <p class="modal-note" id="modal-note">APIキーは <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a> で取得できます。</p>
+      <button class="btn-modal-delete" id="btn-delete-key" onclick="deleteApiKey()" style="display:none" data-i18n="modal_delete_key">キーを削除</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ═══════════════════════════════════════
+  //  多言語 (i18n)
+  // ═══════════════════════════════════════
+  const LANG_KEY = 'bp_lang';
+  let currentLang = localStorage.getItem(LANG_KEY) || 'ja';
+
+  const I18N = {
+    ja: {
+      subtitle: '毎日の血圧・脈拍を記録',
+      lbl_profile: 'プロフィール設定', lbl_age: '年齢', lbl_gender: '性別',
+      male: '男性', female: '女性',
+      save_profile: 'プロフィールを保存して同年代比較を有効にする',
+      edit: '変更',
+      lbl_new_record: '新しい記録',
+      clinic: '🏥 診察室血圧', home: '🏠 家庭血圧',
+      lbl_ai: '🤖 AI音声・テキスト入力',
+      ai_placeholder: '「上が130、下が85、脈拍72」と話しかけるか入力 → AI解析',
+      ai_hint: '数字3つ：「130 85 72」→ 即時入力（API不要） ／ 自然言語：「上が130下が85脈拍72」→ AI解析',
+      mic_start: '🎤 録音開始', mic_recording: '🎤 録音中（タップで終了）',
+      ai_parse: '🤖 AI解析', lbl_manual: 'または数値を直接入力',
+      lbl_sys: '収縮期（上）', lbl_dia: '拡張期（下）', lbl_pulse: '脈拍',
+      btn_record: '記録する',
+      leg_normal: '正常血圧', leg_elevated: '正常高値', leg_high: '高値血圧',
+      leg_ht1: 'I度高血圧', leg_ht2: 'II度高血圧', leg_ht3: 'III度高血圧', leg_ish: '孤立性収縮期',
+      lbl_records: '記録一覧', empty: 'まだ記録がありません',
+      apikey_btn: '⚙️ APIキー', dashboard_btn: '📊 グラフ', guide_btn: '📋 基準を確認',
+      cls_normal: '正常血圧', cls_elevated: '正常高値血圧', cls_high: '高値血圧',
+      cls_ht1: 'I度高血圧', cls_ht2: 'II度高血圧', cls_ht3: 'III度高血圧', cls_ish: '孤立性収縮期高血圧',
+      loc_home: '🏠 家庭', loc_clinic: '🏥 診察室',
+      peer_good: '同年代より良好 👍', peer_same: '同年代と同程度 👌', peer_warn: '同年代より高め ⚠️',
+      peer_avg_label: '平均',
+      peer_disclaimer: 'この比較はあくまで参考です。医療上の判断は医師にご相談ください。出典：厚生労働省 令和元年国民健康・栄養調査',
+      toast_recorded: '✓ 記録しました', toast_auto_recorded: '✅ 記録しました',
+      toast_deleted: '削除しました', toast_profile_saved: '✓ プロフィールを保存しました',
+      toast_apikey_saved: '✓ APIキーを保存しました', toast_apikey_deleted: 'APIキーを削除しました',
+      toast_no_values: '⚠️ 3つの数値をすべて入力してください',
+      toast_check_sys: '⚠️ 収縮期血圧の値を確認してください',
+      toast_check_dia: '⚠️ 拡張期血圧の値を確認してください',
+      toast_check_pulse: '⚠️ 脈拍の値を確認してください',
+      toast_enter_text: '⚠️ テキストを入力してください',
+      toast_parse_fail: '⚠️ 数値を読み取れませんでした。手動で入力してください',
+      toast_ai_done: '✓ 数値を入力しました。確認して「記録する」を押してください',
+      toast_no_speech: '⚠️ このブラウザは音声入力非対応です（Chrome推奨）',
+      toast_age_error: '⚠️ 年齢を正しく入力してください',
+      toast_apikey_format: '⚠️ APIキーは sk-ant- で始まる必要があります',
+      ai_recording: '🔴 録音中...', ai_analyzing: '解析中...',
+      ai_done_direct: ' を入力しました', ai_done_ai: 'AI解析完了',
+      ai_done_local: 'ローカル解析', ai_done_local_fb: 'ローカル解析（API失敗）',
+      ai_error: '⚠️ 解析失敗',
+      modal_title: '⚙️ Claude APIキー設定',
+      modal_desc: 'AI解析機能を使用するにはAnthropicのAPIキーが必要です。\nキーはこのデバイスのlocalStorageのみに保存され、外部に送信されません。\nAPIキー未設定でも、ローカルの正規表現でテキスト解析が使えます。',
+      modal_save: '保存して有効にする', modal_cancel: 'キャンセル', modal_delete_key: 'キーを削除',
+      modal_note_html: 'APIキーは <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a> で取得できます。',
+      age_sfx: '歳',
+      age_groups: ['10代','20代','30代','40代','50代','60代','70代以上'],
+    },
+    en: {
+      subtitle: 'Daily blood pressure & pulse tracking',
+      lbl_profile: 'Profile Settings', lbl_age: 'Age', lbl_gender: 'Gender',
+      male: 'Male', female: 'Female',
+      save_profile: 'Save profile and enable peer comparison',
+      edit: 'Edit',
+      lbl_new_record: 'New Record',
+      clinic: '🏥 Clinic BP', home: '🏠 Home BP',
+      lbl_ai: '🤖 AI Voice / Text Input',
+      ai_placeholder: 'Say or type "systolic 130, diastolic 85, pulse 72" → AI parse',
+      ai_hint: '3 numbers: "130 85 72" → instant input ／ Natural language → AI parse',
+      mic_start: '🎤 Start Recording', mic_recording: '🎤 Recording (tap to stop)',
+      ai_parse: '🤖 AI Parse', lbl_manual: 'or enter values manually',
+      lbl_sys: 'Systolic (upper)', lbl_dia: 'Diastolic (lower)', lbl_pulse: 'Pulse',
+      btn_record: 'Save Record',
+      leg_normal: 'Normal', leg_elevated: 'Elevated', leg_high: 'High Normal',
+      leg_ht1: 'HTN Stage 1', leg_ht2: 'HTN Stage 2', leg_ht3: 'HTN Stage 3', leg_ish: 'Isolated Syst.',
+      lbl_records: 'Records', empty: 'No records yet',
+      apikey_btn: '⚙️ API Key', dashboard_btn: '📊 Graph', guide_btn: '📋 Reference',
+      cls_normal: 'Normal BP', cls_elevated: 'Elevated BP', cls_high: 'High Normal BP',
+      cls_ht1: 'HTN Stage 1', cls_ht2: 'HTN Stage 2', cls_ht3: 'HTN Stage 3', cls_ish: 'Isolated Systolic HTN',
+      loc_home: '🏠 Home', loc_clinic: '🏥 Clinic',
+      peer_good: 'Better than peers 👍', peer_same: 'Similar to peers 👌', peer_warn: 'Higher than peers ⚠️',
+      peer_avg_label: ' avg',
+      peer_disclaimer: 'For reference only. Consult your doctor for medical decisions. Source: Japan NHNS 2019',
+      toast_recorded: '✓ Record saved', toast_auto_recorded: '✅ Record saved',
+      toast_deleted: 'Deleted', toast_profile_saved: '✓ Profile saved',
+      toast_apikey_saved: '✓ API key saved', toast_apikey_deleted: 'API key deleted',
+      toast_no_values: '⚠️ Please enter all 3 values',
+      toast_check_sys: '⚠️ Check systolic value',
+      toast_check_dia: '⚠️ Check diastolic value',
+      toast_check_pulse: '⚠️ Check pulse value',
+      toast_enter_text: '⚠️ Please enter text',
+      toast_parse_fail: '⚠️ Could not read values. Please enter manually',
+      toast_ai_done: '✓ Values filled in. Confirm and press Save',
+      toast_no_speech: '⚠️ Voice input not supported (Chrome recommended)',
+      toast_age_error: '⚠️ Please enter a valid age',
+      toast_apikey_format: '⚠️ API key must start with sk-ant-',
+      ai_recording: '🔴 Recording...', ai_analyzing: 'Analyzing...',
+      ai_done_direct: ' entered', ai_done_ai: 'AI parse complete',
+      ai_done_local: 'Local parse', ai_done_local_fb: 'Local parse (API failed)',
+      ai_error: '⚠️ Parse failed',
+      modal_title: '⚙️ Claude API Key',
+      modal_desc: 'An Anthropic API key is required for AI parsing.\nThe key is stored only in your device\'s localStorage.\nLocal regex parsing works without an API key.',
+      modal_save: 'Save and Enable', modal_cancel: 'Cancel', modal_delete_key: 'Delete Key',
+      modal_note_html: 'Get your API key at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>',
+      age_sfx: 'y/o',
+      age_groups: ['teens','20s','30s','40s','50s','60s','70s+'],
+    },
+    de: {
+      subtitle: 'Tägliche Blutdruck- & Pulsmessung',
+      lbl_profile: 'Profileinstellungen', lbl_age: 'Alter', lbl_gender: 'Geschlecht',
+      male: 'Männlich', female: 'Weiblich',
+      save_profile: 'Profil speichern und Altersvergleich aktivieren',
+      edit: 'Ändern',
+      lbl_new_record: 'Neue Messung',
+      clinic: '🏥 Praxismessung', home: '🏠 Heimmessung',
+      lbl_ai: '🤖 KI-Sprach-/Texteingabe',
+      ai_placeholder: 'Sprechen oder eingeben: „130 85 72" oder „systolisch 130 diastolisch 85 Puls 72"',
+      ai_hint: '3 Zahlen: „130 85 72" → Soforteingabe ／ Natürliche Sprache → KI-Analyse',
+      mic_start: '🎤 Aufnahme starten', mic_recording: '🎤 Aufnahme läuft (tippen zum Stoppen)',
+      ai_parse: '🤖 KI-Analyse', lbl_manual: 'oder Werte manuell eingeben',
+      lbl_sys: 'Systolisch (oben)', lbl_dia: 'Diastolisch (unten)', lbl_pulse: 'Puls',
+      btn_record: 'Messung speichern',
+      leg_normal: 'Normal', leg_elevated: 'Hochnormal', leg_high: 'Hoch-normal',
+      leg_ht1: 'Hypertonie Gr. 1', leg_ht2: 'Hypertonie Gr. 2', leg_ht3: 'Hypertonie Gr. 3', leg_ish: 'Isoliert syst.',
+      lbl_records: 'Messungen', empty: 'Noch keine Messungen',
+      apikey_btn: '⚙️ API-Schlüssel', dashboard_btn: '📊 Diagramm', guide_btn: '📋 Referenz',
+      cls_normal: 'Normaler RR', cls_elevated: 'Hochnormaler RR', cls_high: 'Hoch-normaler RR',
+      cls_ht1: 'Hypertonie Gr. 1', cls_ht2: 'Hypertonie Gr. 2', cls_ht3: 'Hypertonie Gr. 3', cls_ish: 'Isolierte syst. HTN',
+      loc_home: '🏠 Heim', loc_clinic: '🏥 Praxis',
+      peer_good: 'Besser als Gleichaltrige 👍', peer_same: 'Ähnlich wie Gleichaltrige 👌', peer_warn: 'Höher als Gleichaltrige ⚠️',
+      peer_avg_label: ' Ø',
+      peer_disclaimer: 'Nur zur Orientierung. Medizinische Entscheidungen bitte mit Ihrem Arzt besprechen.',
+      toast_recorded: '✓ Messung gespeichert', toast_auto_recorded: '✅ Messung gespeichert',
+      toast_deleted: 'Gelöscht', toast_profile_saved: '✓ Profil gespeichert',
+      toast_apikey_saved: '✓ API-Schlüssel gespeichert', toast_apikey_deleted: 'API-Schlüssel gelöscht',
+      toast_no_values: '⚠️ Bitte alle 3 Werte eingeben',
+      toast_check_sys: '⚠️ Systolischen Wert prüfen',
+      toast_check_dia: '⚠️ Diastolischen Wert prüfen',
+      toast_check_pulse: '⚠️ Pulswert prüfen',
+      toast_enter_text: '⚠️ Bitte Text eingeben',
+      toast_parse_fail: '⚠️ Werte nicht lesbar. Bitte manuell eingeben',
+      toast_ai_done: '✓ Werte eingetragen. Bitte bestätigen und speichern',
+      toast_no_speech: '⚠️ Spracheingabe nicht unterstützt (Chrome empfohlen)',
+      toast_age_error: '⚠️ Bitte gültiges Alter eingeben',
+      toast_apikey_format: '⚠️ API-Schlüssel muss mit sk-ant- beginnen',
+      ai_recording: '🔴 Aufnahme...', ai_analyzing: 'Analysiere...',
+      ai_done_direct: ' eingegeben', ai_done_ai: 'KI-Analyse abgeschlossen',
+      ai_done_local: 'Lokale Analyse', ai_done_local_fb: 'Lokale Analyse (API-Fehler)',
+      ai_error: '⚠️ Analyse fehlgeschlagen',
+      modal_title: '⚙️ Claude API-Schlüssel',
+      modal_desc: 'Ein Anthropic-API-Schlüssel ist für die KI-Analyse erforderlich.\nDer Schlüssel wird nur im localStorage gespeichert.',
+      modal_save: 'Speichern und aktivieren', modal_cancel: 'Abbrechen', modal_delete_key: 'Schlüssel löschen',
+      modal_note_html: 'API-Schlüssel: <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>',
+      age_sfx: 'J.',
+      age_groups: ['Jugend','20er','30er','40er','50er','60er','70er+'],
+    },
+    zh: {
+      subtitle: '每日血压·脉搏记录',
+      lbl_profile: '个人资料设置', lbl_age: '年龄', lbl_gender: '性别',
+      male: '男性', female: '女性',
+      save_profile: '保存资料并启用同龄比较',
+      edit: '修改',
+      lbl_new_record: '新建记录',
+      clinic: '🏥 诊室血压', home: '🏠 家庭血压',
+      lbl_ai: '🤖 AI语音/文字输入',
+      ai_placeholder: '说或输入「高压130，低压85，脉搏72」→ AI解析',
+      ai_hint: '三个数字：「130 85 72」→ 直接输入 ／ 自然语言 → AI解析',
+      mic_start: '🎤 开始录音', mic_recording: '🎤 录音中（点击停止）',
+      ai_parse: '🤖 AI解析', lbl_manual: '或手动输入数值',
+      lbl_sys: '收缩压（高压）', lbl_dia: '舒张压（低压）', lbl_pulse: '脉搏',
+      btn_record: '保存记录',
+      leg_normal: '正常血压', leg_elevated: '正常高值', leg_high: '高值血压',
+      leg_ht1: '1级高血压', leg_ht2: '2级高血压', leg_ht3: '3级高血压', leg_ish: '单纯收缩期',
+      lbl_records: '记录列表', empty: '暂无记录',
+      apikey_btn: '⚙️ API密钥', dashboard_btn: '📊 图表', guide_btn: '📋 参考标准',
+      cls_normal: '正常血压', cls_elevated: '正常高值血压', cls_high: '高值血压',
+      cls_ht1: '1级高血压', cls_ht2: '2级高血压', cls_ht3: '3级高血压', cls_ish: '单纯收缩期高血压',
+      loc_home: '🏠 家庭', loc_clinic: '🏥 诊室',
+      peer_good: '优于同龄人 👍', peer_same: '与同龄人相近 👌', peer_warn: '高于同龄人 ⚠️',
+      peer_avg_label: '均值',
+      peer_disclaimer: '仅供参考，医疗决策请咨询医生。数据来源：日本2019年国民健康营养调查',
+      toast_recorded: '✓ 记录已保存', toast_auto_recorded: '✅ 记录已保存',
+      toast_deleted: '已删除', toast_profile_saved: '✓ 资料已保存',
+      toast_apikey_saved: '✓ API密钥已保存', toast_apikey_deleted: 'API密钥已删除',
+      toast_no_values: '⚠️ 请输入全部3个数值',
+      toast_check_sys: '⚠️ 请检查收缩压数值',
+      toast_check_dia: '⚠️ 请检查舒张压数值',
+      toast_check_pulse: '⚠️ 请检查脉搏数值',
+      toast_enter_text: '⚠️ 请输入文字',
+      toast_parse_fail: '⚠️ 无法读取数值，请手动输入',
+      toast_ai_done: '✓ 数值已填入，确认后点击保存',
+      toast_no_speech: '⚠️ 此浏览器不支持语音输入（推荐Chrome）',
+      toast_age_error: '⚠️ 请输入有效年龄',
+      toast_apikey_format: '⚠️ API密钥必须以 sk-ant- 开头',
+      ai_recording: '🔴 录音中...', ai_analyzing: '解析中...',
+      ai_done_direct: ' 已输入', ai_done_ai: 'AI解析完成',
+      ai_done_local: '本地解析', ai_done_local_fb: '本地解析（API失败）',
+      ai_error: '⚠️ 解析失败',
+      modal_title: '⚙️ Claude API密钥设置',
+      modal_desc: '使用AI解析功能需要Anthropic API密钥。\n密钥仅保存在您设备的localStorage中，不会外传。\n不设置密钥也可以使用本地正则解析。',
+      modal_save: '保存并启用', modal_cancel: '取消', modal_delete_key: '删除密钥',
+      modal_note_html: '在 <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a> 获取API密钥',
+      age_sfx: '岁',
+      age_groups: ['10多岁','20多岁','30多岁','40多岁','50多岁','60多岁','70岁以上'],
+    },
+  };
+
+  function t(key) {
+    return (I18N[currentLang] || I18N.ja)[key] || I18N.ja[key] || key;
+  }
+
+  function ageGroupLabel(age) {
+    const groups = t('age_groups');
+    if (age < 20) return groups[0];
+    if (age < 30) return groups[1];
+    if (age < 40) return groups[2];
+    if (age < 50) return groups[3];
+    if (age < 60) return groups[4];
+    if (age < 70) return groups[5];
+    return groups[6];
+  }
+
+  // ── 言語切り替え ──
+  function setLang(lang) {
+    currentLang = lang;
+    localStorage.setItem(LANG_KEY, lang);
+    closeLangMenu();
+    applyTranslations();
+  }
+
+  function toggleLangMenu() {
+    document.getElementById('lang-menu').classList.toggle('open');
+  }
+
+  function closeLangMenu() {
+    document.getElementById('lang-menu').classList.remove('open');
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!document.getElementById('lang-selector').contains(e.target)) closeLangMenu();
+  });
+
+  function applyTranslations() {
+    const T = I18N[currentLang] || I18N.ja;
+    document.title = 'BPulse Check';
+    document.getElementById('app-subtitle').textContent = T.subtitle;
+    document.getElementById('lbl-profile').textContent  = T.lbl_profile;
+    document.getElementById('lbl-age').textContent      = T.lbl_age;
+    document.getElementById('lbl-gender').textContent   = T.lbl_gender;
+    document.getElementById('btn-male').textContent     = T.male;
+    document.getElementById('btn-female').textContent   = T.female;
+    document.getElementById('btn-save-profile').textContent = T.save_profile;
+    document.getElementById('btn-edit-profile').textContent = T.edit;
+    document.getElementById('lbl-new-record').textContent   = T.lbl_new_record;
+    document.getElementById('btn-clinic').textContent   = T.clinic;
+    document.getElementById('btn-home').textContent     = T.home;
+    document.getElementById('lbl-ai').textContent       = T.lbl_ai;
+    document.getElementById('ai-text-input').placeholder = T.ai_placeholder;
+    document.getElementById('ai-hint').textContent      = T.ai_hint;
+    if (!isRecording) document.getElementById('btn-mic').textContent = T.mic_start;
+    else              document.getElementById('btn-mic').textContent = T.mic_recording;
+    document.getElementById('btn-ai-parse').textContent = T.ai_parse;
+    document.getElementById('lbl-manual-input').textContent = T.lbl_manual;
+    document.getElementById('lbl-systolic').textContent = T.lbl_sys;
+    document.getElementById('lbl-diastolic').textContent = T.lbl_dia;
+    document.getElementById('lbl-pulse').textContent    = T.lbl_pulse;
+    document.getElementById('btn-record').textContent   = T.btn_record;
+    document.getElementById('leg-normal').textContent   = T.leg_normal;
+    document.getElementById('leg-elevated').textContent = T.leg_elevated;
+    document.getElementById('leg-high').textContent     = T.leg_high;
+    document.getElementById('leg-ht1').textContent      = T.leg_ht1;
+    document.getElementById('leg-ht2').textContent      = T.leg_ht2;
+    document.getElementById('leg-ht3').textContent      = T.leg_ht3;
+    document.getElementById('leg-ish').textContent      = T.leg_ish;
+    document.getElementById('lbl-records').textContent  = T.lbl_records;
+    document.getElementById('btn-apikey').textContent   = T.apikey_btn;
+    document.getElementById('btn-dashboard').textContent = T.dashboard_btn;
+    document.getElementById('btn-guide').textContent    = T.guide_btn;
+    document.getElementById('modal-title').textContent  = T.modal_title;
+    document.getElementById('modal-desc').textContent   = T.modal_desc;
+    document.getElementById('modal-save').textContent   = T.modal_save;
+    document.getElementById('modal-cancel').textContent = T.modal_cancel;
+    document.getElementById('btn-delete-key').textContent = T.modal_delete_key;
+    document.getElementById('modal-note').innerHTML     = T.modal_note_html;
+    // アクティブ言語ハイライト
+    document.querySelectorAll('.lang-menu-item').forEach(btn => {
+      btn.classList.toggle('active', btn.textContent.includes(
+        {ja:'日本語', en:'English', de:'Deutsch', zh:'中文'}[currentLang]
+      ));
+    });
+    // 動的コンテンツ再描画
+    renderRecords();
+    const profile = loadProfile();
+    if (profile) renderProfile(profile);
+    else {
+      const el = document.getElementById('lbl-empty');
+      if (el) el.textContent = T.empty;
+    }
+  }
+
+  // ═══════════════════════════════════════
+  //  定数・状態
+  // ═══════════════════════════════════════
+  const STORAGE_KEY   = 'bp_records';
+  const PROFILE_KEY   = 'bp_profile';
+  const API_KEY_STORE = 'bp_claude_api_key';
+
+  let currentLocation = 'clinic';
+  let currentGender   = 'male';
+
+  // ═══════════════════════════════════════
+  //  APIキー管理
+  // ═══════════════════════════════════════
+  function getApiKey() { return localStorage.getItem(API_KEY_STORE) || ''; }
+
+  function openApiKeyModal() {
+    const existing = getApiKey();
+    const input = document.getElementById('apikey-input');
+    input.value = existing ? '••••••••••••••••' : '';
+    input.placeholder = existing ? '（設定済み）' : 'sk-ant-api03-...';
+    document.getElementById('btn-delete-key').style.display = existing ? 'block' : 'none';
+    document.getElementById('modal-apikey').style.display = 'flex';
+  }
+
+  function closeApiKeyModal() {
+    document.getElementById('modal-apikey').style.display = 'none';
+  }
+
+  function modalOverlayClick(e) {
+    if (e.target === e.currentTarget) closeApiKeyModal();
+  }
+
+  function saveApiKey() {
+    const raw = document.getElementById('apikey-input').value.trim();
+    if (!raw || raw === '••••••••••••••••') { closeApiKeyModal(); return; }
+    if (!raw.startsWith('sk-ant-')) { showToast(t('toast_apikey_format')); return; }
+    localStorage.setItem(API_KEY_STORE, raw);
+    closeApiKeyModal();
+    showToast(t('toast_apikey_saved'));
+  }
+
+  function deleteApiKey() {
+    localStorage.removeItem(API_KEY_STORE);
+    closeApiKeyModal();
+    showToast(t('toast_apikey_deleted'));
+  }
+
+  // ═══════════════════════════════════════
+  //  Web Speech API（音声入力）
+  // ═══════════════════════════════════════
+  let recognition = null;
+  let isRecording  = false;
+  let manualStop   = false;
+
+  function toggleMic() {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) { showToast(t('toast_no_speech')); return; }
+    isRecording ? stopRecording() : startRecording(SpeechRec);
+  }
+
+  function startRecording(SpeechRec) {
+    manualStop = false;
+    recognition = new SpeechRec();
+    recognition.lang = 'ja-JP';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      isRecording = true;
+      const btn = document.getElementById('btn-mic');
+      btn.classList.add('recording');
+      btn.textContent = t('mic_recording');
+      setAiStatus(t('ai_recording'), 'recording');
+    };
+
+    recognition.onresult = (e) => {
+      let transcript = '';
+      for (let i = 0; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      document.getElementById('ai-text-input').value = transcript;
+    };
+
+    recognition.onend = () => {
+      isRecording = false;
+      const btn = document.getElementById('btn-mic');
+      btn.classList.remove('recording');
+      btn.textContent = t('mic_start');
+      setAiStatus('', '');
+      if (manualStop) {
+        const text = document.getElementById('ai-text-input').value.trim();
+        if (text) aiParse(true); // fromVoice = true → 自動記録
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'aborted') return;
+      isRecording = false;
+      const btn = document.getElementById('btn-mic');
+      btn.classList.remove('recording');
+      btn.textContent = t('mic_start');
+      setAiStatus('', '');
+      showToast('⚠️ ' + e.error);
+    };
+
+    recognition.start();
+  }
+
+  function stopRecording() {
+    manualStop = true;
+    if (recognition) recognition.stop();
+  }
+
+  function setAiStatus(msg, cls) {
+    const el = document.getElementById('ai-status');
+    el.textContent = msg;
+    el.className = 'ai-status' + (cls ? ' ' + cls : '');
+  }
+
+  // ═══════════════════════════════════════
+  //  AI解析
+  // ═══════════════════════════════════════
+  async function aiParse(fromVoice = false) {
+    const raw = document.getElementById('ai-text-input').value.trim();
+    if (!raw) { showToast(t('toast_enter_text')); return; }
+
+    // 音声区切り語を正規化
+    const text = raw.replace(/てん|テン|点|、|，|・|\/|ー/g, ' ').replace(/\s+/g, ' ').trim();
+
+    // パターン1：数字3つ スペース区切り → 即時入力
+    if (/^\d+(\s+\d+){2}$/.test(text)) {
+      const [s, d, p] = text.split(/\s+/).map(Number);
+      applyParsedValues({ systolic: s, diastolic: d, pulse: p },
+        `${s} / ${d} / ${p}${t('ai_done_direct')}`, fromVoice);
+      return;
+    }
+
+    // パターン2：自然言語 → Claude API → 正規表現フォールバック
+    const parseBtn = document.getElementById('btn-ai-parse');
+    parseBtn.disabled = true;
+    setAiStatus(t('ai_analyzing'), 'analyzing');
+
+    const apiKey = getApiKey();
+
+    if (apiKey) {
+      try {
+        const result = await callClaudeAPI(text, apiKey);
+        applyParsedValues(result, t('ai_done_ai'), fromVoice);
+        return;
+      } catch (err) {
+        console.warn('Claude API error, falling back to regex:', err.message);
+      }
+    }
+
+    const fallback = regexParse(text);
+    if (fallback.systolic || fallback.diastolic || fallback.pulse) {
+      applyParsedValues(fallback, apiKey ? t('ai_done_local_fb') : t('ai_done_local'), fromVoice);
+    } else {
+      setAiStatus(t('ai_error'), 'error');
+      setTimeout(() => setAiStatus('', ''), 3000);
+      showToast(t('toast_parse_fail'));
+      parseBtn.disabled = false;
+    }
+  }
+
+  function applyParsedValues(result, label, fromVoice = false) {
+    if (result.systolic  != null) document.getElementById('systolic').value  = result.systolic;
+    if (result.diastolic != null) document.getElementById('diastolic').value = result.diastolic;
+    if (result.pulse     != null) document.getElementById('pulse').value     = result.pulse;
+
+    document.getElementById('ai-text-input').value = '';
+    setAiStatus('✓ ' + label, 'done');
+    setTimeout(() => setAiStatus('', ''), 3000);
+    document.getElementById('btn-ai-parse').disabled = false;
+
+    if (fromVoice) {
+      addRecord(true); // 音声入力後は自動記録
+    } else {
+      showToast(t('toast_ai_done'));
+    }
+  }
+
+  async function callClaudeAPI(text, apiKey) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 100,
+        system: '血圧と脈拍の数値を抽出してください。必ずJSON形式で {"systolic": 数値, "diastolic": 数値, "pulse": 数値} のみを返してください。数値が読み取れない場合はnullを入れてください。',
+        messages: [{ role: 'user', content: text }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const content = data.content?.[0]?.text || '';
+    const match = content.match(/\{[\s\S]*?\}/);
+    if (!match) throw new Error('no JSON');
+    return JSON.parse(match[0]);
+  }
+
+  function regexParse(text) {
+    const result = { systolic: null, diastolic: null, pulse: null };
+    const sysM = text.match(/(?:収縮期|上が|上は|上:|systolic)\s*[:：]?\s*(\d+)/i)
+               || text.match(/(\d+)\s*[\/\-]\s*\d+/);
+    if (sysM) result.systolic = parseInt(sysM[1]);
+    const diaM = text.match(/(?:拡張期|下が|下は|下:|diastolic)\s*[:：]?\s*(\d+)/i)
+               || text.match(/\d+\s*[\/\-]\s*(\d+)/);
+    if (diaM) result.diastolic = parseInt(diaM[1]);
+    const pulM = text.match(/(?:脈拍|脈|心拍|pulse|puls)\s*[:：]?\s*(\d+)/i);
+    if (pulM) result.pulse = parseInt(pulM[1]);
+    if (!result.systolic && !result.diastolic) {
+      const nums = (text.match(/\d+/g) || []).map(Number);
+      if (nums.length >= 3) {
+        result.systolic  = nums.find(v => v >= 80 && v <= 260) || null;
+        result.diastolic = nums.find(v => v >= 40 && v <= 150 && v !== result.systolic) || null;
+        result.pulse     = nums.find(v => v >= 40 && v <= 180 && v !== result.systolic && v !== result.diastolic) || null;
+      } else if (nums.length === 2) {
+        result.systolic = nums[0]; result.diastolic = nums[1];
+      }
+    }
+    return result;
+  }
+
+  // ═══════════════════════════════════════
+  //  同年代平均（令和元年 国民健康・栄養調査）
+  // ═══════════════════════════════════════
+  const PEER_AVG = {
+    male: [
+      { minAge: 20, maxAge: 29, sys: 120, dia: 74 },
+      { minAge: 30, maxAge: 39, sys: 122, dia: 78 },
+      { minAge: 40, maxAge: 49, sys: 126, dia: 81 },
+      { minAge: 50, maxAge: 59, sys: 132, dia: 82 },
+      { minAge: 60, maxAge: 69, sys: 136, dia: 79 },
+      { minAge: 70, maxAge: 199, sys: 141, dia: 76 },
+    ],
+    female: [
+      { minAge: 20, maxAge: 29, sys: 110, dia: 68 },
+      { minAge: 30, maxAge: 39, sys: 112, dia: 71 },
+      { minAge: 40, maxAge: 49, sys: 114, dia: 71 },
+      { minAge: 50, maxAge: 59, sys: 124, dia: 75 },
+      { minAge: 60, maxAge: 69, sys: 131, dia: 77 },
+      { minAge: 70, maxAge: 199, sys: 138, dia: 75 },
+    ],
+  };
+
+  function getPeerAvg(age, gender) {
+    return (PEER_AVG[gender] || PEER_AVG.male).find(r => age >= r.minAge && age <= r.maxAge) || null;
+  }
+
+  function peerCompare(sys, dia, age, gender) {
+    const avg = getPeerAvg(age, gender);
+    if (!avg) return null;
+    const M = 5;
+    if (sys < avg.sys && dia < avg.dia) return { level: 'good', key: 'peer_good', avg };
+    if (sys <= avg.sys + M && dia <= avg.dia + M) return { level: 'same', key: 'peer_same', avg };
+    return { level: 'warn', key: 'peer_warn', avg };
+  }
+
+  // ═══════════════════════════════════════
+  //  プロフィール
+  // ═══════════════════════════════════════
+  function loadProfile() {
+    try { return JSON.parse(localStorage.getItem(PROFILE_KEY)) || null; }
+    catch { return null; }
+  }
+
+  function saveProfile() {
+    const age = parseInt(document.getElementById('profile-age').value);
+    if (!age || age < 1 || age > 120) { showToast(t('toast_age_error')); return; }
+    const profile = { age, gender: currentGender };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    renderProfile(profile);
+    renderRecords();
+    showToast(t('toast_profile_saved'));
+  }
+
+  function editProfile() {
+    const p = loadProfile();
+    document.getElementById('profile-form').style.display = '';
+    document.getElementById('profile-compact').classList.remove('visible');
+    if (p) { document.getElementById('profile-age').value = p.age; setGender(p.gender); }
+  }
+
+  function renderProfile(profile) {
+    if (!profile) {
+      document.getElementById('profile-form').style.display = '';
+      document.getElementById('profile-compact').classList.remove('visible');
+      return;
+    }
+    document.getElementById('profile-form').style.display = 'none';
+    document.getElementById('profile-compact').classList.add('visible');
+
+    const gLabel = profile.gender === 'female' ? t('female') : t('male');
+    const avg    = getPeerAvg(profile.age, profile.gender);
+    const agGrp  = avg ? ageGroupLabel(profile.age) : '';
+    const avgStr = avg ? `${avg.sys}/${avg.dia} mmHg` : '—';
+
+    let chip;
+    if (currentLang === 'en')
+      chip = `👤 ${profile.age}${t('age_sfx')} · ${gLabel} (${agGrp} avg ${avgStr})`;
+    else if (currentLang === 'de')
+      chip = `👤 ${profile.age}${t('age_sfx')} · ${gLabel} (${agGrp} Ø ${avgStr})`;
+    else if (currentLang === 'zh')
+      chip = `👤 ${profile.age}${t('age_sfx')}·${gLabel}（${agGrp}${t('peer_avg_label')} ${avgStr}）`;
+    else
+      chip = `👤 ${profile.age}${t('age_sfx')}・${gLabel}（${agGrp}${t('peer_avg_label')} ${avgStr}）`;
+
+    document.getElementById('profile-chip-text').textContent = chip;
+  }
+
+  function setGender(g) {
+    currentGender = g;
+    document.getElementById('btn-male').classList.toggle('active', g === 'male');
+    document.getElementById('btn-female').classList.toggle('active', g === 'female');
+  }
+
+  // ═══════════════════════════════════════
+  //  測定場所
+  // ═══════════════════════════════════════
+  function setLocation(loc) {
+    currentLocation = loc;
+    document.getElementById('btn-clinic').classList.toggle('active', loc === 'clinic');
+    document.getElementById('btn-home').classList.toggle('active', loc === 'home');
+  }
+
+  // ═══════════════════════════════════════
+  //  血圧分類（JSH2019）
+  // ═══════════════════════════════════════
+  const CLINIC_CRITERIA = [
+    { key: 'ish', test: (s,d) => s >= 140 && d < 90 },
+    { key: 'ht3', test: (s,d) => s >= 180 || d >= 110 },
+    { key: 'ht2', test: (s,d) => s >= 160 || d >= 100 },
+    { key: 'ht1', test: (s,d) => s >= 140 || d >= 90 },
+    { key: 'high', test: (s,d) => s >= 130 || d >= 80 },
+    { key: 'elevated', test: (s,d) => s >= 120 && d < 80 },
+    { key: 'normal', test: () => true },
+  ];
+
+  const HOME_CRITERIA = [
+    { key: 'ish', test: (s,d) => s >= 135 && d < 85 },
+    { key: 'ht3', test: (s,d) => s >= 160 || d >= 100 },
+    { key: 'ht2', test: (s,d) => s >= 145 || d >= 90 },
+    { key: 'ht1', test: (s,d) => s >= 135 || d >= 85 },
+    { key: 'high', test: (s,d) => s >= 125 || d >= 75 },
+    { key: 'elevated', test: (s,d) => s >= 115 && d < 75 },
+    { key: 'normal', test: () => true },
+  ];
+
+  function classify(s, d, loc) {
+    for (const c of (loc === 'home' ? HOME_CRITERIA : CLINIC_CRITERIA)) {
+      if (c.test(s, d)) return c.key;
+    }
+    return 'normal';
+  }
+
+  // ═══════════════════════════════════════
+  //  ストレージ
+  // ═══════════════════════════════════════
+  function loadRecords() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function saveRecords(records) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    const w = ['日','月','火','水','木','金','土'];
+    return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}（${w[d.getDay()]}）${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  // ═══════════════════════════════════════
+  //  レンダリング
+  // ═══════════════════════════════════════
+  function renderRecords() {
+    const records = loadRecords();
+    const profile = loadProfile();
+    const list    = document.getElementById('records-list');
+    document.getElementById('count-badge').textContent = `${records.length}${currentLang === 'ja' ? '件' : currentLang === 'zh' ? '条' : ''}`;
+
+    if (records.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">🩺</div><p>${t('empty')}</p></div>`;
+      return;
+    }
+
+    list.innerHTML = records.map(r => {
+      const loc      = r.location || 'clinic';
+      const clsKey   = classify(r.systolic, r.diastolic, loc);
+      const clsLabel = t('cls_' + clsKey);
+      const locLabel = loc === 'home' ? t('loc_home') : t('loc_clinic');
+
+      let peerHtml = '';
+      if (profile) {
+        const cmp = peerCompare(r.systolic, r.diastolic, profile.age, profile.gender);
+        if (cmp) {
+          const gLabel = profile.gender === 'female' ? t('female') : t('male');
+          const avgLabel = `${ageGroupLabel(profile.age)}${gLabel}${t('peer_avg_label')} ${cmp.avg.sys}/${cmp.avg.dia}`;
+          peerHtml = `
+            <div class="peer-comparison">
+              <span class="peer-result ${cmp.level}">${t(cmp.key)}</span>
+              <span class="peer-avg">${avgLabel}</span>
+            </div>
+            <div class="peer-disclaimer">${t('peer_disclaimer')}</div>`;
+        }
+      }
+
+      return `
+        <div class="record-card">
+          <button class="btn-delete" onclick="deleteRecord('${r.id}')" title="✕">✕</button>
+          <div class="card-top">
+            <div class="bp-display">
+              <span class="systolic-val cls-${clsKey}">${r.systolic}</span>
+              <span class="sep">/</span>
+              <span class="diastolic-val">${r.diastolic}</span>
+              <span class="bp-unit">mmHg</span>
+            </div>
+            <div class="card-right">
+              <div class="pulse-badge">♥ ${r.pulse} bpm</div>
+            </div>
+          </div>
+          <div class="card-bottom">
+            <div class="card-bottom-row1">
+              <div class="card-badges">
+                <span class="classification-badge cls-${clsKey}">${clsLabel}</span>
+                <span class="location-badge">${locLabel}</span>
+              </div>
+              <span class="timestamp">${formatDate(r.timestamp)}</span>
+            </div>
+            ${peerHtml}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ═══════════════════════════════════════
+  //  記録追加 / 削除
+  // ═══════════════════════════════════════
+  function addRecord(autoSave = false) {
+    const s = parseInt(document.getElementById('systolic').value);
+    const d = parseInt(document.getElementById('diastolic').value);
+    const p = parseInt(document.getElementById('pulse').value);
+
+    if (!s || !d || !p) { showToast(t('toast_no_values')); return; }
+    if (s < 60 || s > 260) { showToast(t('toast_check_sys')); return; }
+    if (d < 40 || d > 160) { showToast(t('toast_check_dia')); return; }
+    if (p < 30 || p > 200) { showToast(t('toast_check_pulse')); return; }
+
+    const records = loadRecords();
+    records.unshift({ id: Date.now().toString(), systolic: s, diastolic: d, pulse: p,
+      location: currentLocation, timestamp: new Date().toISOString() });
+    saveRecords(records);
+    renderRecords();
+
+    ['systolic','diastolic','pulse'].forEach(id => document.getElementById(id).value = '');
+    if (!autoSave) document.getElementById('systolic').focus();
+    showToast(autoSave ? t('toast_auto_recorded') : t('toast_recorded'));
+  }
+
+  function deleteRecord(id) {
+    saveRecords(loadRecords().filter(r => r.id !== id));
+    renderRecords();
+    showToast(t('toast_deleted'));
+  }
+
+  // ═══════════════════════════════════════
+  //  トースト
+  // ═══════════════════════════════════════
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // Enter キー
+  document.querySelectorAll('.field input').forEach((el, i, arr) => {
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        if (i < arr.length - 1) arr[i + 1].focus();
+        else addRecord();
+      }
+    });
+  });
+
+  // Ctrl+Enter で AI解析
+  document.getElementById('ai-text-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) aiParse(false);
+  });
+
+  // ── 初期化 ──
+  const savedProfile = loadProfile();
+  if (savedProfile) { setGender(savedProfile.gender); renderProfile(savedProfile); }
+  applyTranslations(); // 言語適用（renderRecords も内部で呼ぶ）
+</script>
+</body>
+</html>
