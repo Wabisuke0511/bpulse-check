@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>血圧分類基準 — BPulse Check</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -218,12 +218,28 @@
       margin-top: 10px;
     }
 
+    /* ── Safe area ── */
+    header { padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
+    body   { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+    /* ── Touch feedback ── */
+    .btn-back:active { transform: scale(0.93); transition: transform 0.08s; }
+
     @media (max-width: 480px) {
-      .bp-table { font-size: 0.78rem; }
-      .bp-table thead th, .bp-table tbody td { padding: 9px 10px; }
-      .cls-label { font-size: 0.78rem; gap: 5px; }
+      header { padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+      .btn-back { padding: 8px 10px; font-size: 0.75rem; }
+      main { padding: 18px 12px; }
+
+      /* テーブルを横スクロール可能に */
+      .section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .bp-table { font-size: 0.75rem; min-width: 340px; }
+      .bp-table thead th, .bp-table tbody td { padding: 8px 9px; }
+      .cls-label { font-size: 0.75rem; gap: 5px; }
+      .cls-dot { width: 7px; height: 7px; }
       .bp-table tbody td:nth-child(2),
-      .bp-table tbody td:nth-child(3) { font-size: 0.82rem; }
+      .bp-table tbody td:nth-child(3) { font-size: 0.8rem; }
+      .note-box { padding: 13px 14px; }
+      .note-box li { font-size: 0.78rem; }
     }
   </style>
 </head>

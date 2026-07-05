@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>BPulse Check – Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -187,6 +187,36 @@
       line-height: 1.6;
     }
     .normal-note strong { color: var(--normal-color); }
+
+    /* ── Safe area ── */
+    header { padding-top: calc(0px + env(safe-area-inset-top, 0px)); }
+    body   { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+    /* ── Touch feedback ── */
+    .period-btn:active  { transform: scale(0.93); transition: transform 0.08s; }
+    .header-back:active { transform: scale(0.93); transition: transform 0.08s; }
+
+    @media (max-width: 480px) {
+      header {
+        height: auto;
+        min-height: 56px;
+        padding: 8px 14px;
+        padding-top: calc(8px + env(safe-area-inset-top, 0px));
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .header-title { align-items: flex-start; }
+      .header-title .app-name { display: none; }
+      .header-title .page-name { font-size: 15px; }
+      .period-btns { gap: 4px; }
+      .period-btn  { padding: 5px 10px; font-size: 12px; }
+      main { padding: 14px 12px 40px; gap: 14px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .summary-grid .card:last-child { grid-column: 1 / -1; }
+      .card-value { font-size: 22px; }
+      .chart-wrapper { height: 220px; }
+      .offline-bar { top: auto; position: relative; }
+    }
 
     /* ── Offline bar ── */
     .offline-bar {

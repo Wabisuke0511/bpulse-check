@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BPulse Check</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -932,6 +932,50 @@
 
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
+    /* ── Safe area (iPhone notch / home bar) ── */
+    header {
+      padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    }
+    body {
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* ── Touch feedback ── */
+    .btn-header:active  { transform: scale(0.93); transition: transform 0.08s; }
+    .btn-record:active  { transform: scale(0.97); transition: transform 0.08s; }
+    .btn-delete:active  { transform: scale(0.9);  transition: transform 0.08s; }
+    .btn-edit:active    { transform: scale(0.9);  transition: transform 0.08s; }
+    .record-card { transition: opacity 0.1s; }
+    .record-card:active { opacity: 0.8; }
+
+    /* ── 480px: ナビボタンをアイコンのみ表示 ── */
+    @media (max-width: 480px) {
+      header {
+        padding: 8px 14px;
+        padding-top: calc(8px + env(safe-area-inset-top, 0px));
+        gap: 8px;
+      }
+      .header-title h1 { font-size: 1rem; }
+      .header-title p  { display: none; }
+      .header-actions  { gap: 4px; }
+
+      .btn-label { display: none; }
+      .btn-header {
+        padding: 0;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        justify-content: center;
+        font-size: 1.1rem;
+        gap: 0;
+      }
+
+      .offline-bar { top: 52px; font-size: 0.72rem; padding: 7px 14px; }
+
+      main { padding: 16px 12px; }
+    }
+
+    /* ── 420px: 入力エリア詰め ── */
     @media (max-width: 420px) {
       .inputs-row { gap: 7px; }
       .field input { font-size: 1.2rem; padding: 11px 5px; }
@@ -939,7 +983,6 @@
       .legend { gap: 6px 12px; }
       .profile-row { grid-template-columns: 1fr; }
       .ai-btn-row { flex-direction: column; }
-      .header-actions { gap: 6px; }
     }
 
     /* ── Offline bar ── */
@@ -979,9 +1022,9 @@
         <button class="lang-menu-item" onclick="setLang('zh')">🇨🇳 中文</button>
       </div>
     </div>
-    <button class="btn-header" onclick="openApiKeyModal()" id="btn-apikey">⚙️ APIキー</button>
-    <a href="dashboard.html" class="btn-header" id="btn-dashboard">📊 グラフ</a>
-    <a href="blood-pressure-guide.html" class="btn-header" id="btn-guide">📋 基準を確認</a>
+    <button class="btn-header" onclick="openApiKeyModal()" id="btn-apikey">⚙️<span class="btn-label" id="btn-apikey-lbl"> APIキー</span></button>
+    <a href="dashboard.html" class="btn-header" id="btn-dashboard">📊<span class="btn-label" id="btn-dashboard-lbl"> グラフ</span></a>
+    <a href="blood-pressure-guide.html" class="btn-header" id="btn-guide">📋<span class="btn-label" id="btn-guide-lbl"> 基準を確認</span></a>
   </div>
 </header>
 <div class="offline-bar" id="offline-bar">📡 オフラインモードで動作中 — データはこのデバイスのみに保存されます</div>
@@ -1435,9 +1478,9 @@ APIキー未設定でも、ローカルの正規表現でテキスト解析が�
     document.getElementById('leg-ht3').textContent      = T.leg_ht3;
     document.getElementById('leg-ish').textContent      = T.leg_ish;
     document.getElementById('lbl-records').textContent  = T.lbl_records;
-    document.getElementById('btn-apikey').textContent   = T.apikey_btn;
-    document.getElementById('btn-dashboard').textContent = T.dashboard_btn;
-    document.getElementById('btn-guide').textContent    = T.guide_btn;
+    document.getElementById('btn-apikey-lbl').textContent   = ' ' + T.apikey_btn.replace(/^\S+\s*/, '');
+    document.getElementById('btn-dashboard-lbl').textContent = ' ' + T.dashboard_btn.replace(/^\S+\s*/, '');
+    document.getElementById('btn-guide-lbl').textContent    = ' ' + T.guide_btn.replace(/^\S+\s*/, '');
     document.getElementById('modal-title').textContent  = T.modal_title;
     document.getElementById('modal-desc').textContent   = T.modal_desc;
     document.getElementById('modal-save').textContent   = T.modal_save;
